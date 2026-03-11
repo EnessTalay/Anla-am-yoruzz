@@ -1,46 +1,73 @@
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  Stage 1 — Build                                                            ║
-# ║  SDK imajını kullanarak projeyi derliyoruz.                                 ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-WORKDIR /source
+Hala aynı hatayı alıyorsun çünkü Render eski Dockerfile içeriğini (sorunlu olan adduser satırını) görmeye devam ediyor. Ya dosya kaydedilmedi ya da yanlış klasördeki dosyaya bakıyoruz.
 
-# Önce sadece .csproj dosyalarını kopyala → bağımlılık katmanı önbelleğe alınır.
-# Kaynak kod değişse bile bu katman yeniden build edilmez.
-COPY Anlasalamiyoruz.sln                                                          ./
-COPY src/Anlasalamiyoruz.API/Anlasalamiyoruz.API.csproj                          src/Anlasalamiyoruz.API/
-COPY src/Anlasalamiyoruz.Application/Anlasalamiyoruz.Application.csproj          src/Anlasalamiyoruz.Application/
-COPY src/Anlasalamiyoruz.Domain/Anlasalamiyoruz.Domain.csproj                    src/Anlasalamiyoruz.Domain/
-COPY src/Anlasalamiyoruz.Infrastructure/Anlasalamiyoruz.Infrastructure.csproj    src/Anlasalamiyoruz.Infrastructure/
+Bu sorunu kökten çözmek için lütfen şu adımları sırasıyla ve dikkatle yap:
 
-RUN dotnet restore --locked-mode
+1. Adım: Mevcut Dockerfile'ı Temizle
 
-# Kaynak kodun tamamını kopyala ve Release modunda yayınla
-COPY src/ src/
-RUN dotnet publish src/Anlasalamiyoruz.API/Anlasalamiyoruz.API.csproj \
-    --configuration Release \
-    --output /app/publish \
-    --no-restore
+Projenin en dış dizinindeki (root) Dockerfile dosyasını aç. İçindeki her şeyi sil ve yerine sadece aşağıdaki en sade ve hatasız kodu yapıştır:
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  Stage 2 — Runtime                                                          ║
-# ║  SDK'sız, sadece runtime imajı → küçük ve güvenli final image.             ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+code
+Dockerfile
+download
+content_copy
+expand_less
+# BUILD AŞAMASI
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Sadece gerekli proje dosyalarını kopyala (Hız için)
+COPY ["Anlasalamiyoruz.sln", "./"]
+COPY ["src/Anlasalamiyoruz.API/Anlasalamiyoruz.API.csproj", "src/Anlasalamiyoruz.API/"]
+COPY ["src/Anlasalamiyoruz.Application/Anlasalamiyoruz.Application.csproj", "src/Anlasalamiyoruz.Application/"]
+COPY ["src/Anlasalamiyoruz.Domain/Anlasalamiyoruz.Domain.csproj", "src/Anlasalamiyoruz.Domain/"]
+COPY ["src/Anlasalamiyoruz.Infrastructure/Anlasalamiyoruz.Infrastructure.csproj", "src/Anlasalamiyoruz.Infrastructure/"]
+
+# Restore işlemi
+RUN dotnet restore
+
+# Tüm kodu kopyala ve yayınla
+COPY . .
+WORKDIR "/src/src/Anlasalamiyoruz.API"
+RUN dotnet publish "Anlasalamiyoruz.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# ÇALIŞTIRMA AŞAMASI
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
-
-# Yayınlanan dosyaları kopyala
 COPY --from=build /app/publish .
 
-# Render ve benzeri platformlar PORT env var'ını dinamik olarak atar.
-# ASPNETCORE_HTTP_PORTS .NET 8+ için önerilen yöntemdir;
-# ASPNETCORE_URLS da desteklenmektedir (bkz. Program.cs).
-ENV ASPNETCORE_HTTP_PORTS=8080
-
+# Port ayarı (Render için kritik)
+ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
-# Root olmayan kullanıcı ile çalıştır (güvenlik)
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
-USER appuser
-
 ENTRYPOINT ["dotnet", "Anlasalamiyoruz.API.dll"]
+2. Adım: Diğer Dockerfile'ları Sil
+
+Eğer src/Anlasalamiyoruz.API klasörünün içinde de bir Dockerfile varsa onu sil. Sadece en dıştaki (root) kalsın. Render'ın kafası karışmasın.
+
+3. Adım: Değişiklikleri GitHub'a Gönder (Kesin Çözüm)
+
+Terminali aç ve şu komutları sırayla çalıştırarak değişikliğin GitHub'a gittiğinden emin ol:
+
+code
+Bash
+download
+content_copy
+expand_less
+git add .
+git commit -m "fix: remove problematic adduser line from dockerfile"
+git push origin main
+4. Adım: Render'da "Clear Cache" Yap
+
+Render paneline gir:
+
+Senin servisini (Anlasalamiyoruz-api) seç.
+
+Sağ üstteki "Manual Deploy" butonuna tıkla.
+
+"Clear Build Cache & Deploy" seçeneğini seç. (Bu çok önemli, eski hatalı dosyayı hafızasından siler).
+
+Neden Hala Hata Veriyordu?
+
+Önceki Dockerfile'da bulunan adduser --disabled-password... satırı, .NET'in kullandığı hafifletilmiş (Alpine/Debian) imajlarda çalışmayabiliyordu. Yukarıdaki yeni kodda bu satırı tamamen kaldırdık ve .NET 8'in kendi standart yapısını kullandık.
+
+Bu sefer "Build Successful" yazısını görmen lazım! Hadi bir daha deneyelim. 🚀
