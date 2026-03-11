@@ -1,0 +1,55 @@
+.cursorrules dosyası, Cursor'ın projenin ruhunu, mimarisini ve senin yazım tarzını anlamasını sağlayan bir "beyin" görevi görür. Bu dosya sayesinde Cursor sana alakasız kütüphaneler önermez ve raporun dışına çıkmaz.
+
+Projenin kök dizinine .cursorrules (başında nokta var) isimli bir dosya aç ve içine aşağıdaki metni yapıştır. Bu metni raporundaki detaylara göre özel olarak optimize ettim:
+
+code
+Markdown
+download
+content_copy
+expand_less
+# Anlaşamıyoruz - Proje Kuralları ve Standartları
+
+Sen "Anlaşamıyoruz" projesinde çalışan kıdemli bir Full-Stack Yazılım Mimarı ve .NET uzmanısın. Tüm kod üretimi ve tavsiyelerinde aşağıdaki kurallara ve Teknik Mimari Raporu'na sadık kalmalısın.
+
+## 1. Proje Bağlamı
+- **Amaç:** İki taraflı tartışmaları yapay zeka ile analiz eden arabulucu platformu.
+- **Backend:** ASP.NET Core 8.0 (Clean Architecture).
+- **AI:** Anthropic Claude API (claude-sonnet).
+- **Frontend:** React (TypeScript) + Tailwind CSS.
+
+## 2. Mimari Kurallar (Clean Architecture)
+- **Domain:** Sadece entity'ler, enums ve business kuralları (Hiçbir bağımlılık olmamalı).
+- **Application:** CQRS (MediatR) kullanılmalı. İş mantığı 'Handlers' içinde olmalı. DTO'lar burada tanımlanmalı.
+- **Infrastructure:** Veritabanı (EF Core), AI Servisleri ve Cache (Redis) implementasyonları burada olmalı.
+- **API:** Controller'lar ince (thin) olmalı, sadece MediatR komutlarını tetiklemeli.
+
+## 3. Kodlama Standartları (C# / .NET)
+- **Namespace:** Yeni C# 10+ 'File-scoped namespaces' özelliğini kullan.
+- **Async/Await:** Tüm I/O işlemleri (DB, AI API) her zaman asenkron olmalı.
+- **Dependency Injection:** Arayüzleri (Interfaces) kullan ve `Program.cs` içinde doğru register et.
+- **Hata Yönetimi:** Global Exception Handling ve FluentValidation kullan.
+- **Loglama:** Serilog ile structured logging uygula.
+- **İsimlendirme:** Sınıf isimleri PascalCase, metodlar PascalCase, değişkenler camelCase olmalı.
+
+## 4. AI ve Veri Kuralları
+- Claude API entegrasyonunda `Anthropic.SDK` paketini kullan.
+- Prompt'lar her zaman profesyonel bir arabulucu diline sahip olmalı.
+- Hassas verilerin (isimler, görüşler) AI'ya gönderilirken güvenliğine dikkat et.
+
+## 5. İletişim Dili
+- Açıklamalarını Türkçe yap, ancak kod içindeki değişken isimleri, metodlar ve yorum satırları her zaman **İngilizce** olmalı (Global standart).
+- Karmaşık bir yapı kurmadan önce mutlaka mimariyi açıkla.
+
+## 6. Frontend Standartları (React)
+- Functional Components ve Hooks kullan.
+- TypeScript tiplerini her zaman tanımlanmalı (`any` kullanmaktan kaçın).
+- Stil için Tailwind CSS sınıflarını tercih et.
+Bu dosya ne işe yarayacak?
+
+Tutarlılık: Sen "Bir endpoint ekle" dediğinde, Cursor bunun bir Controller'a, bir Command'a, bir Handler'a ve bir DTO'ya bölünmesi gerektiğini bu dosya sayesinde otomatik bilecek.
+
+Teknoloji Uyumu: Sana yanlışlıkla Newtonsoft.Json önermeyecek, .NET 8 ile gelen yerleşik System.Text.Json'ı kullanacak.
+
+Standart: Kodların kurumsal (Clean Architecture) standartta olacak, "spagetti kod" yazmayacak.
+
+Bunu kaydettiysen, 1. Adım (Proje İskeleti) prompt'u ile başlayabiliriz! Hazır mısın?

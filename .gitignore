@@ -1,0 +1,39 @@
+# ─── Gizli / Hassas Dosyalar ──────────────────────────────────────────────────
+.env
+*.env.local
+*.env.*.local
+
+# ─── .NET ─────────────────────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.DotSettings.user
+TestResults/
+
+# ─── appsettings (gerçek değerler Development'ta kalmalı, Production env var'da) ──
+# appsettings.Development.json hassas veri içeriyorsa buraya ekle:
+# src/*/appsettings.Development.json
+
+# ─── Node / Frontend ──────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.*.local
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+# docker-compose.override.yml  # Override dosyasını da dışlamak istersen
+
+# ─── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── IDE ──────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/settings.json
+*.swp
+*.swo

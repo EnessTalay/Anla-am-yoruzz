@@ -1,0 +1,36 @@
+# ─── Stage 1: Build ───────────────────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /source
+
+# Restore bağımlılıklarını önbelleğe almak için sadece csproj dosyalarını kopyala
+COPY Anlasalamiyoruz.sln .
+COPY src/Anlasalamiyoruz.API/Anlasalamiyoruz.API.csproj             src/Anlasalamiyoruz.API/
+COPY src/Anlasalamiyoruz.Application/Anlasalamiyoruz.Application.csproj src/Anlasalamiyoruz.Application/
+COPY src/Anlasalamiyoruz.Domain/Anlasalamiyoruz.Domain.csproj       src/Anlasalamiyoruz.Domain/
+COPY src/Anlasalamiyoruz.Infrastructure/Anlasalamiyoruz.Infrastructure.csproj src/Anlasalamiyoruz.Infrastructure/
+
+RUN dotnet restore
+
+# Kaynak kodun tamamını kopyala ve yayınla
+COPY src/ src/
+RUN dotnet publish src/Anlasalamiyoruz.API/Anlasalamiyoruz.API.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore
+
+# ─── Stage 2: Runtime ─────────────────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+# Sağlık kontrolü için curl yükle
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["dotnet", "Anlasalamiyoruz.API.dll"]
