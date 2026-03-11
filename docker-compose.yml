@@ -1,53 +1,47 @@
+# Yerel geliştirme ve test için: docker compose up --build
+# Gereken env dosyası: .env (bkz. .env.example)
+
 services:
 
-  # ─── PostgreSQL Veritabanı ──────────────────────────────────────────────────
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: AnlasalamiyoruzDb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD env variable is required}
+      POSTGRES_DB:       AnlasalamiyoruzDb
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Lütfen .env dosyasında POSTGRES_PASSWORD tanimlayin}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d AnlasalamiyoruzDb"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
-  # ─── .NET 10 API ────────────────────────────────────────────────────────────
+  # ── .NET API ────────────────────────────────────────────────────────────────
   api:
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__DefaultConnection: "Host=postgres;Database=AnlasalamiyoruzDb;Username=postgres;Password=${POSTGRES_PASSWORD}"
-      Gemini__ApiKey: ${GEMINI_API_KEY:?GEMINI_API_KEY env variable is required}
-      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost}
+      ASPNETCORE_ENVIRONMENT:          Production
+      # Render ve diğer platformların PORT env var'ını da dinle (Program.cs'de işleniyor)
+      PORT:                            8080
+      ConnectionStrings__DefaultConnection: >-
+        Host=postgres;Port=5432;Database=AnlasalamiyoruzDb;
+        Username=postgres;Password=${POSTGRES_PASSWORD}
+      Gemini__ApiKey:        ${GEMINI_API_KEY:?Lütfen .env dosyasında GEMINI_API_KEY tanimlayin}
+      Cors__AllowedOrigins:  ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
-
-  # ─── React Frontend (Nginx) ─────────────────────────────────────────────────
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - api
 
 volumes:
   postgres_data:

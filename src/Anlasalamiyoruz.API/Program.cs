@@ -15,6 +15,21 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    // ── Dynamic PORT (Render, Railway, Fly.io vb.) ────────────────────────────
+    // Bu platformlar uygulamaya dinleyeceği portu PORT env var ile bildirir.
+    // ASPNETCORE_URLS veya ASPNETCORE_HTTP_PORTS set edilmemişse PORT'u kullan.
+    var dynamicPort = Environment.GetEnvironmentVariable("PORT");
+    var aspNetCoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+    var aspNetCorePorts = Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS");
+
+    if (!string.IsNullOrWhiteSpace(dynamicPort)
+        && string.IsNullOrWhiteSpace(aspNetCoreUrls)
+        && string.IsNullOrWhiteSpace(aspNetCorePorts))
+    {
+        builder.WebHost.UseUrls($"http://+:{dynamicPort}");
+        Log.Information("Listening on dynamic PORT: {Port}", dynamicPort);
+    }
+
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
