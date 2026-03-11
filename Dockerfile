@@ -1,23 +1,42 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  Stage 1 — Build                                                            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
+WORKDIR /source
 
-COPY ["Anlasalamiyoruz.sln", "./"]
-COPY ["src/Anlasalamiyoruz.API/Anlasalamiyoruz.API.csproj", "src/Anlasalamiyoruz.API/"]
-COPY ["src/Anlasalamiyoruz.Application/Anlasalamiyoruz.Application.csproj", "src/Anlasalamiyoruz.Application/"]
-COPY ["src/Anlasalamiyoruz.Domain/Anlasalamiyoruz.Domain.csproj", "src/Anlasalamiyoruz.Domain/"]
-COPY ["src/Anlasalamiyoruz.Infrastructure/Anlasalamiyoruz.Infrastructure.csproj", "src/Anlasalamiyoruz.Infrastructure/"]
+# Önce sadece .csproj dosyalarını kopyala → bağımlılık katmanı önbelleğe alınır.
+COPY Anlasalamiyoruz.sln                                                          ./
+COPY src/Anlasalamiyoruz.API/Anlasalamiyoruz.API.csproj                          src/Anlasalamiyoruz.API/
+COPY src/Anlasalamiyoruz.Application/Anlasalamiyoruz.Application.csproj          src/Anlasalamiyoruz.Application/
+COPY src/Anlasalamiyoruz.Domain/Anlasalamiyoruz.Domain.csproj                    src/Anlasalamiyoruz.Domain/
+COPY src/Anlasalamiyoruz.Infrastructure/Anlasalamiyoruz.Infrastructure.csproj    src/Anlasalamiyoruz.Infrastructure/
 
 RUN dotnet restore
 
-COPY . .
-WORKDIR "/src/src/Anlasalamiyoruz.API"
-RUN dotnet publish "Anlasalamiyoruz.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+# Kaynak kodun tamamını kopyala ve Release modunda yayınla
+COPY src/ src/
+RUN dotnet publish src/Anlasalamiyoruz.API/Anlasalamiyoruz.API.csproj \
+    --configuration Release \
+    --output /app/publish \
+    --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  Stage 2 — Runtime                                                          ║
+# ║  SDK'sız, sadece aspnet runtime → küçük ve güvenli final image.            ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
+
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:8080
+# Render ve benzeri platformlar PORT env var'ını dinamik olarak atar.
+# Program.cs bu değeri okuyarak UseUrls ile uygular.
+# Hiçbir şey set edilmemişse varsayılan port 8080'dir.
+ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
+
+# Root olmayan kullanıcı ile çalıştır (güvenlik)
+RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+USER appuser
 
 ENTRYPOINT ["dotnet", "Anlasalamiyoruz.API.dll"]
